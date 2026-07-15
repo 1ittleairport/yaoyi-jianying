@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env.local
+.env*.local
+src/data/users.json
+src/data/userdata/
+.DS_Store
+*.log
+Thumbs.db
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+test.txt

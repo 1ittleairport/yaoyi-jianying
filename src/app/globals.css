@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+:root {
+  /* ─── INS风柔和色板 ─── */
+  --bg-warm: #faf5f0;
+  --bg-cool: #f5f0ec;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  --glass-lift: 0 8px 40px rgba(0, 0, 0, 0.08);
+
+  --text: #2c2b28;
+  --text-secondary: #8c8882;
+  --text-tertiary: #b8b2aa;
+
+  --border: #e8e2dc;
+  --border-light: #f0ece6;
+
+  --accent-rose: #dca8a0;
+  --accent-rose-bg: #fdf0ee;
+  --accent-sage: #88b898;
+  --accent-sage-bg: #eef6f0;
+  --accent-peach: #e0b898;
+  --accent-peach-bg: #fcf4ec;
+  --accent-lavender: #a898c8;
+  --accent-lavender-bg: #f2eef8;
+
+  --error: #c47a6a;
+  --error-bg: #fcf0ec;
+  --success: #6a9c7a;
+  --success-bg: #ecf6f0;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+body {
+  font-family: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+  background: linear-gradient(135deg, var(--bg-warm) 0%, var(--bg-cool) 50%, #f0ede8 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+}
+
+/* ─── 毛玻璃卡片 ─── */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.25s ease;
+}
+.glass-card:hover {
+  box-shadow: var(--glass-lift);
+  transform: translateY(-2px);
+}
+
+.glass-card-static {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+}
+
+/* ─── 装饰性毛玻璃圆点 ─── */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ─── 标签/胶囊 ─── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+}
+
+/* ─── 滚动条 ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 2px; }
+
+/* ─── 按钮基础 ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary {
+  background: var(--text);
+  color: white;
+}
+.btn-primary:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+.btn-primary:disabled {
+  opacity: 0.3;
+  transform: none;
+  cursor: not-allowed;
+}
+.btn-ghost {
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.9);
+  border-color: var(--text-secondary);
+}
+
+/* ─── 输入框 ─── */
+.input {
+  width: 100%;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.input:focus {
+  border-color: var(--text);
+}
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+  line-height: 1.6;
+}
+.textarea:focus {
+  border-color: var(--text);
+}
+.textarea::placeholder {
+  color: var(--text-tertiary);
+}
