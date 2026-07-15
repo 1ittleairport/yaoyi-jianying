@@ -1,28 +1,23 @@
 /**
- * 用户数据存储
+ * 用户数据存储 — Supabase 版
  *
- * 本地开发：JSON 文件（src/data/）
- * Vercel 生产：内存 Map（需部署后替换为数据库）
+ * 在 Vercel 上永久保存账号和用户数据，
+ * 不会因为服务器重启而丢失。
  *
- * ⚠ 重要：Vercel serverless 函数不支持写入文件系统。
- * 当前的生产解决方案是「localStorage + 内存 Map」组合：
- *   - 用户的错题/材料/历史存在 localStorage（前端）✅ 支持 Vercel
- *   - 账号注册/登录验证存在内存 Map（服务端）⚠ 重启后丢失
- *   - 长久的解决方案：迁移到 Supabase / Vercel KV
- *
- * ✅ 现在先部署验证功能，后续一步到位换数据库
+ * 环境变量：
+ *   SUPABASE_URL      = 你的 Supabase 项目地址
+ *   SUPABASE_SERVICE_KEY = Service Role Key（服务器端全权限）
  */
 
-import fs from "fs";
-import path from "path";
-import os from "os";
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
 
 export interface StoredUser {
   id: string;
   email: string;
   name: string;
   password: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface UserProfile {
@@ -32,97 +27,100 @@ export interface UserProfile {
   createdAt: string;
 }
 
-// 检测是否可以写入文件系统
-function canWriteFS(): boolean {
+/* ─── 调用 Supabase REST API ─── */
+
+async function supaFetch(path: string, options: RequestInit = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Prefer": "return=representation",
+      ...options.headers,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res;
+}
+
+/* ─── 用户 CRUD ─── */
+
+export async function findUserByEmail(email: string): Promise<StoredUser | undefined> {
   try {
-    const testPath = path.join(os.tmpdir(), ".yy_test_" + Date.now());
-    fs.writeFileSync(testPath, "test", "utf-8");
-    fs.unlinkSync(testPath);
-    return true;
+    const res = await supaFetch(`users?email=eq.${encodeURIComponent(email.toLowerCase())}&select=*`, {
+      method: "GET",
+    });
+    const users: StoredUser[] = await res.json();
+    return users[0];
   } catch {
-    return false;
+    return undefined;
   }
 }
 
-const USE_FS = canWriteFS();
-const DATA_DIR = USE_FS
-  ? path.join(process.cwd(), "src", "data")
-  : path.join(os.tmpdir(), "yaoyi_data");
-
-// 内存备用存储（Vercel 环境）
-const memUsers: StoredUser[] = [];
-
-/* ─── 文件系统读写 ─── */
-
-function ensureDir() {
-  if (!USE_FS) return;
+export async function findUserById(id: string): Promise<StoredUser | undefined> {
   try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    const f = path.join(DATA_DIR, "users.json");
-    if (!fs.existsSync(f)) fs.writeFileSync(f, "[]", "utf-8");
-  } catch { /* 静默 */ }
-}
-
-function readUsers(): StoredUser[] {
-  if (!USE_FS) return memUsers;
-  ensureDir();
-  try {
-    const f = path.join(DATA_DIR, "users.json");
-    return JSON.parse(fs.readFileSync(f, "utf-8"));
-  } catch { return []; }
-}
-
-function writeUsers(users: StoredUser[]) {
-  if (!USE_FS) {
-    memUsers.length = 0;
-    memUsers.push(...users);
-    return;
+    const res = await supaFetch(`users?id=eq.${encodeURIComponent(id)}&select=*`, {
+      method: "GET",
+    });
+    const users: StoredUser[] = await res.json();
+    return users[0];
+  } catch {
+    return undefined;
   }
-  ensureDir();
-  try {
-    fs.writeFileSync(path.join(DATA_DIR, "users.json"), JSON.stringify(users, null, 2), "utf-8");
-  } catch { /* 静默 */ }
 }
 
-/* ─── 公开 API ─── */
-
-export function findUserByEmail(email: string): StoredUser | undefined {
-  return readUsers().find((u) => u.email === email.toLowerCase());
-}
-
-export function findUserById(id: string): StoredUser | undefined {
-  return readUsers().find((u) => u.id === id);
-}
-
-export function createUser(email: string, name: string, hashedPassword: string): UserProfile {
-  const users = readUsers();
+export async function createUser(
+  email: string, name: string, hashedPassword: string,
+): Promise<UserProfile> {
   const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  const user: StoredUser = {
-    id, email: email.toLowerCase(), name, password: hashedPassword, createdAt: new Date().toISOString(),
-  };
-  users.push(user);
-  writeUsers(users);
-  return { id, email: user.email, name: user.name, createdAt: user.createdAt };
+  const now = new Date().toISOString();
+
+  await supaFetch("users", {
+    method: "POST",
+    body: JSON.stringify({
+      id,
+      email: email.toLowerCase(),
+      name,
+      password: hashedPassword,
+      created_at: now,
+    }),
+  });
+
+  return { id, email: email.toLowerCase(), name, createdAt: now };
 }
 
-export function getUserData(userId: string): Record<string, any> {
-  if (!USE_FS) return {}; // Vercel 上不持久化服务端数据
+export async function getUserData(userId: string): Promise<Record<string, any>> {
   try {
-    const f = path.join(DATA_DIR, "userdata", `${userId}.json`);
-    if (!fs.existsSync(f)) return {};
-    return JSON.parse(fs.readFileSync(f, "utf-8"));
-  } catch { return {}; }
+    const res = await supaFetch(`user_data?user_id=eq.${encodeURIComponent(userId)}&select=data`, {
+      method: "GET",
+    });
+    const rows = await res.json();
+    return rows[0]?.data || {};
+  } catch {
+    return {};
+  }
 }
 
-export function saveUserData(userId: string, data: Record<string, any>) {
-  if (!USE_FS) return; // Vercel 上不持久化服务端数据
-  try {
-    const d = path.join(DATA_DIR, "userdata");
-    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
-    fs.writeFileSync(path.join(d, `${userId}.json`), JSON.stringify(data, null, 2), "utf-8");
-  } catch { /* 静默 */ }
+export async function saveUserData(userId: string, data: Record<string, any>) {
+  await supaFetch("user_data", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, data, updated_at: new Date().toISOString() }),
+    headers: {
+      "Prefer": "return=representation,resolution=merge-duplicates",
+    } as any,
+  });
 }
 
 export function toProfile(user: StoredUser): UserProfile {
-  return { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt };
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    createdAt: user.created_at,
+  };
 }

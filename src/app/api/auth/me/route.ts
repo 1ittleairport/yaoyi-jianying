@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "登录已过期" }, { status: 401 });
   }
 
-  const user = findUserById(payload.userId);
+  const user = await findUserById(payload.userId);
   if (!user) {
     return NextResponse.json({ error: "用户不存在" }, { status: 404 });
   }

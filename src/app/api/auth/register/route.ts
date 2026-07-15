@@ -11,13 +11,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "邮箱和密码（至少6位）为必填" }, { status: 400 });
     }
 
-    const existing = findUserByEmail(email);
+    const existing = await findUserByEmail(email);
     if (existing) {
       return NextResponse.json({ error: "该邮箱已注册" }, { status: 409 });
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const profile = createUser(email, name || email.split("@")[0], hashed);
+    const profile = await createUser(email, name || email.split("@")[0], hashed);
     const token = signToken({ userId: profile.id, email: profile.email });
 
     return NextResponse.json({ user: profile, token });
