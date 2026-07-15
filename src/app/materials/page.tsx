@@ -39,17 +39,22 @@ export default function MaterialsPage() {
 
     const ext = file.name.split(".").pop()?.toLowerCase();
 
+    // ── 前端文件大小检查（Vercel免费版限制 4.5MB） ──
+    const MAX_SIZE = 3.8 * 1024 * 1024; // 留出 multipart 开销余量
+    if (file.size > MAX_SIZE) {
+      setUploadError(`文件过大（${(file.size / 1024 / 1024).toFixed(1)}MB），请上传 3.5MB 以下的文件，或手动复制粘贴文本。`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     // PDF / Word / TXT → 走后端解析
     if (ext === "pdf" || ext === "docx" || ext === "txt") {
       setUploading(true);
       setUploadError(null);
 
       try {
-        // 读取本地文件预览（前端先存基本信息）
-        let localContent = `[文件] ${file.name}（${(file.size / 1024).toFixed(1)} KB）`;
-        localContent += "\n\n正在解析文件内容……";
-
         // 先存一个占位
+        const localContent = `[文件] ${file.name}（${(file.size / 1024).toFixed(1)} KB）\n正在解析文件内容……`;
         const placeholder = addMaterial(file.name, ext === "docx" ? "word" : ext === "pdf" ? "pdf" : "text", localContent);
         logMaterialAdded(file.name);
 
@@ -61,6 +66,14 @@ export default function MaterialsPage() {
           method: "POST",
           body: form,
         });
+
+        // ⚠ 检查响应是否为 JSON（Vercel 超限会返回 HTML）
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          const htmlText = await res.text();
+          console.error("[upload] 非JSON响应（可能是Vercel拒绝大文件）:", htmlText.slice(0, 200));
+          throw new Error(`服务器拒绝处理该文件（响应: ${res.status}），可能是文件过大或网络问题。请尝试缩小文件后重试。`);
+        }
 
         const data = await res.json();
 
